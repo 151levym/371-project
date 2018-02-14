@@ -63,8 +63,43 @@ module lc4_processor
    Nbit_reg #(16, 16'h8200) pc_reg (.in(next_pc), .out(pc), .clk(clk), .we(1'b1), .gwe(gwe), .rst(rst));
 
    /* END DO NOT MODIFY THIS CODE */
+   
+    wire [15:0] alu_output, r1_data, r2_data, to_write, load_data1, load_data2, load_data3, add_to_pc;
+    wire [2:0] r1sel, r2sel, wsel;
+    wire r1re, r2re, regfile_we, nzp_we, select_pc_plus_one, is_load, is_store, is_branch, is_control_insn;
+    
+    lc4_decoder h0(.insn(i_cur_insn), .r1sel(r1sel), .r1re(r1re), .r2sel(r2sel), .r2re(r2re), 
+                  .wsel(wsel), .regfile_we(regfile_we), .nzp_we(nzp_we), .select_pc_plus_one(select_pc_plus_one), 
+                  .is_load(is_load), .is_store(is_store), .is_branch(is_branch), .is_control_insn(is_control_insn));
+    
+    lc4_regfile h1(.clk(clk), .gwe(gwe), .rst(rst), .i_rs(r1sel), .o_rs_data(r1_data), .i_rt(r2sel), .o_rt_data(r2_data),
+                   .i_rd(wsel), .i_wdata(to_write), .i_rd_we(regfile_we));
+    
+    lc4_alu h2(.i_insn(i_cur_insn), .i_pc(pc), .i_r1data(r1_data), .i_r2data(r2_data), .o_result(alu_output));
+    
+    assign load_data1 = alu_output & {16{!is_load}} & {16{!select_pc_plus_one}};
+    assign load_data2 = i_cur_dmem_data & {16{is_load}};
+    assign load_data3 = (pc + 1) & {16{select_pc_plus_one}};
+    assign to_write = load_data1 | load_data2 | load_data3;
+    assign next_pc = ((pc + 1) & {16{!is_control_insn}}) | ((alu_output) & {16{is_control_insn}});
+    assign o_cur_pc = clk ? 0 : pc;
+    assign o_dmem_addr = 16'b0;
+    assign o_dmem_we = 1'b0;
+    assign o_dmem_towrite = 16'b0;
+    
+    
+    assign test_cur_pc = pc;
+    assign test_cur_insn = i_cur_insn;
+    assign test_regfile_we = regfile_we;
+    assign test_regfile_wsel = wsel;
+    assign test_regfile_data = to_write;
+    assign test_nzp_we = nzp_we;
+    assign test_nzp_new_bits = 3'b000;
+    assign test_dmem_we = 1'b0;
+    assign test_dmem_addr = 16'b0;
+    assign test_dmem_data = 16'b0;
 
-
+    
    /*******************************
     * TODO: INSERT YOUR CODE HERE *
     *******************************/
