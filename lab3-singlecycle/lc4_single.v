@@ -95,16 +95,13 @@ module lc4_processor
     assign o_dmem_we = is_store;
     assign o_dmem_towrite = r2_data;
     
-    //assign next_n = ($signed(alu_output) < 0 & nzp_we) | (n & !nzp_we);
-    //assign next_z = ($signed(alu_output) == 0 & nzp_we) | (z & !nzp_we);
-    //assign next_p = ($signed(alu_output) > 0 & nzp_we) | (p & !nzp_we);
-    
-    assign next_n = (($signed(alu_output) < 0) & nzp_we);
-    assign next_z = (($signed(alu_output) == 0) & nzp_we);
-    assign next_p = (($signed(alu_output) > 0) & nzp_we);
+    assign next_n = $signed(to_write) < 0;
+    assign next_z = $signed(to_write) == 0;
+    assign next_p = $signed(to_write) > 0;
     
     assign test_cur_pc = pc;
     assign test_cur_insn = i_cur_insn;
+    //assign test_cur_insn = 16'b0;
     assign test_regfile_we = regfile_we;
     assign test_regfile_wsel = wsel;
     assign test_regfile_data = to_write;
