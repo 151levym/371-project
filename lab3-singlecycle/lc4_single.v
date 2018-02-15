@@ -1,4 +1,5 @@
-/* TODO: name and PennKeys of all group members here
+/* Mara Levy - maralevy
+ * Gabby Schwartz - schwg
  *
  * lc4_single.v
  * Implements a single-cycle data path
@@ -101,7 +102,6 @@ module lc4_processor
     
     assign test_cur_pc = pc;
     assign test_cur_insn = i_cur_insn;
-    //assign test_cur_insn = 16'b0;
     assign test_regfile_we = regfile_we;
     assign test_regfile_wsel = wsel;
     assign test_regfile_data = to_write;
