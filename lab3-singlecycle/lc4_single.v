@@ -64,9 +64,13 @@ module lc4_processor
 
    /* END DO NOT MODIFY THIS CODE */
    
+    Nbit_reg #(1, 0) n_reg (.in(next_n), .out(n), .clk(clk), .we(nzp_we), .gwe(gwe), .rst(rst));
+    Nbit_reg #(1, 0) z_reg (.in(next_z), .out(z), .clk(clk), .we(nzp_we), .gwe(gwe), .rst(rst));
+    Nbit_reg #(1, 0) p_reg (.in(next_p), .out(p), .clk(clk), .we(nzp_we), .gwe(gwe), .rst(rst));
+   
     wire [15:0] alu_output, r1_data, r2_data, to_write, load_data1, load_data2, load_data3, add_to_pc;
     wire [2:0] r1sel, r2sel, wsel;
-    wire r1re, r2re, regfile_we, nzp_we, select_pc_plus_one, is_load, is_store, is_branch, is_control_insn;
+    wire r1re, r2re, regfile_we, nzp_we, select_pc_plus_one, is_load, is_store, is_branch, is_control_insn, n, z, p, next_n, next_z, next_p, branch;
     
     lc4_decoder h0(.insn(i_cur_insn), .r1sel(r1sel), .r1re(r1re), .r2sel(r2sel), .r2re(r2re), 
                   .wsel(wsel), .regfile_we(regfile_we), .nzp_we(nzp_we), .select_pc_plus_one(select_pc_plus_one), 
@@ -81,12 +85,23 @@ module lc4_processor
     assign load_data2 = i_cur_dmem_data & {16{is_load}};
     assign load_data3 = (pc + 1) & {16{select_pc_plus_one}};
     assign to_write = load_data1 | load_data2 | load_data3;
-    assign next_pc = ((pc + 1) & {16{!is_control_insn}}) | ((alu_output) & {16{is_control_insn}});
+    assign branch = ((i_cur_insn[11:9] == 1 && p) | (i_cur_insn[11:9] == 2 && z) | 
+    (i_cur_insn[11:9] == 3 && (z | p)) | (i_cur_insn[11:9] == 4 && n) |
+    (i_cur_insn[11:9] == 5 && (n | p)) | (i_cur_insn[11:9] == 6 && (n | z)) |
+    (i_cur_insn[11:9] == 7 && (n | p | z))) && is_branch;
+    assign next_pc = ((pc + 1) & {16{!is_control_insn && !branch}}) | ((alu_output) & {16{is_control_insn || branch}});
     assign o_cur_pc = clk ? 0 : pc;
-    assign o_dmem_addr = 16'b0;
-    assign o_dmem_we = 1'b0;
-    assign o_dmem_towrite = 16'b0;
+    assign o_dmem_addr = (alu_output & {16{is_load}}) | (alu_output & {16{is_store}}) ;
+    assign o_dmem_we = is_store;
+    assign o_dmem_towrite = r2_data;
     
+    //assign next_n = ($signed(alu_output) < 0 & nzp_we) | (n & !nzp_we);
+    //assign next_z = ($signed(alu_output) == 0 & nzp_we) | (z & !nzp_we);
+    //assign next_p = ($signed(alu_output) > 0 & nzp_we) | (p & !nzp_we);
+    
+    assign next_n = (($signed(alu_output) < 0) & nzp_we);
+    assign next_z = (($signed(alu_output) == 0) & nzp_we);
+    assign next_p = (($signed(alu_output) > 0) & nzp_we);
     
     assign test_cur_pc = pc;
     assign test_cur_insn = i_cur_insn;
@@ -94,15 +109,10 @@ module lc4_processor
     assign test_regfile_wsel = wsel;
     assign test_regfile_data = to_write;
     assign test_nzp_we = nzp_we;
-    assign test_nzp_new_bits = 3'b000;
-    assign test_dmem_we = 1'b0;
-    assign test_dmem_addr = 16'b0;
-    assign test_dmem_data = 16'b0;
-
-    
-   /*******************************
-    * TODO: INSERT YOUR CODE HERE *
-    *******************************/
+    assign test_nzp_new_bits = {next_n,next_z,next_p};
+    assign test_dmem_we = o_dmem_we;
+    assign test_dmem_addr = o_dmem_addr;
+    assign test_dmem_data = (r2_data & {16{is_store}}) | (i_cur_dmem_data & {16{is_load}});
 
 
 
